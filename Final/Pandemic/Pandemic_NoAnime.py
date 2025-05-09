@@ -1,6 +1,6 @@
 import numpy as np
 
-def ThePlague(length, masked = 0, grid_spacing = 0.1, sick_days = 10):
+def ThePlague(length, masked = 0, grid_spacing = 0.1, sick_days = 10, speed_factor = 800):
     
     class Person(object):
 
@@ -92,7 +92,7 @@ def ThePlague(length, masked = 0, grid_spacing = 0.1, sick_days = 10):
             speed2 = np.random.randint(-maxspeed,maxspeed+1)
             while np.abs(speed2) < minspeed:
                 speed2 = np.random.randint(-maxspeed,maxspeed+1)
-            speed = (speed1/800,speed2/800)
+            speed = (speed1/speed_factor,speed2/speed_factor)
 
             v = np.array(speed,float)
             register.append(Person(r,v))
