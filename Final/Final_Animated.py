@@ -1,6 +1,5 @@
 import matplotlib.animation as animation
 import numpy as np
-import time
 from matplotlib import pyplot as plt
 
 # Parameters for the model. Assumption that (0,0) is in the bottom left corner.
@@ -16,7 +15,7 @@ daylength = 12
 sick_time = daylength * 10
 sick_mid = sick_time / 2
 
-class Person(object): # TO DO: Finish death table and then make a counter to count how long an individual has been sick to cross reference with their chance to die.
+class Person(object):
 
     # First, create a person with some position, r, and some velocity, v. These should be 2 dim arrays. Assume everyone is healthy and non-immune.
     def __init__(self,r,v):
@@ -27,7 +26,7 @@ class Person(object): # TO DO: Finish death table and then make a counter to cou
         self.immune = False
         self.counter = 0
         self.grave = 999
-        self.future = np.random.randint(0,2)
+        self.future = np.random.randint(0,2) # if 0, person is destined to die
 
     # How do these people move? A simple s*t = d for their default; later comes if they're too close to people.
     def move(self,deltat):
@@ -62,10 +61,9 @@ class Person(object): # TO DO: Finish death table and then make a counter to cou
             if self.future == 0:
                 self.grave = sick_mid + np.random.randint(-daylength,daylength+1)
 
-
+    # Dying means going off camera
     def dying(self):
         self.alive = False
-        # self.healthy = True
         self.immune = True
         self.r = np.array((-10,-10))
         self.v = np.array((0,0))
@@ -75,18 +73,20 @@ class Person(object): # TO DO: Finish death table and then make a counter to cou
         self.immune = True
 
 
-# Birthing People to infect them later. Avoiding putting them on the borders. Using variable people to count the number of infection machines made.
+# Birthing People to infect them later. Avoiding putting them on the borders. Variables here help track data
 people = 0
 infections = 0
 deaths = 0
 register = list()
 swarm = int(grid_size / grid_spacing)
+
 for i in range(swarm - 1):
     for j in range(swarm -1):
         x = (i+1)*grid_spacing
         y = (j+1)*grid_spacing
         r = np.array((x,y),float)
 
+        # Minimum speed helps destick people in collisions; weird way to let velocities be negative
         speed1 = np.random.randint(-maxspeed,maxspeed+1)
         while np.abs(speed1) < minspeed:
             speed1 = np.random.randint(-maxspeed,maxspeed+1)
@@ -99,6 +99,7 @@ for i in range(swarm - 1):
         register.append(Person(r,v))
         people = people + 1
 
+# Infect Patient Zero
 sickness_ammo = np.random.randint(0,people)
 sickness_gun = register[sickness_ammo].sickness()
 
@@ -114,42 +115,39 @@ for i in range(people):
 ax.set(xlim=[0, grid_size], ylim=[0,grid_size], xlabel='x', ylabel='y')
 ax.legend()
 
-#start = time.time()
 def update(frame):
-#for frame in range(500):
     global deaths, infections
-    totalsick = 0
     ax.set_title(f"{frame * deltat}")
     for i,handle in zip(range(len(register)),handles):
         p1 = register[i]
-        p1.move(deltat)
+        p1.move(deltat) 
         handle.set_offsets([p1.r[0],p1.r[1]])
         if not p1.alive:
             continue
+
+        # Making it clera whose sick or not
         if p1.healthy:
             handle.set_facecolor("g")
         else:
             handle.set_facecolor("r")
-            totalsick += 1
 
-        #if totalsick == 0:
-        #    continue
 
         for j in range(i+1,len(register)):
             p2 = register[j]
             distance = (p1.r - p2.r)**2
             condition = np.sqrt(distance[0] + distance[1])
+            # This is handling infections
             if condition < scl_dist:
-                #This will be where the pandemic can spread
                 if (not p1.healthy or not p2.healthy):
                     gambling = np.random.randint(1,3)
-                    if gambling % 2 == 0:
+                    if gambling % 2 == 0: #Since I have a 50% without masking, I just check if mod2 = 0.
                         if (p1.healthy and not p1.immune):
                             p1.sickness()
                             infections += 1
                         elif (p2.healthy and not p2.immune):
                             p2.sickness()
                             infections += 1
+            #This is supposed to handle collisions; check if a component of their velocities is close to zero if they are close to one another. 
             if condition < 0.02:
                 addv = np.sqrt((p1.v + p2.v)**2)
                 if (addv[0] < 0.03):
@@ -158,10 +156,7 @@ def update(frame):
                 if (addv[1] < 0.03):
                     p1.v[1] *= -1
                     p2.v[1] *= -1
-                
-               
-                
-                
+                    
 
                  
 
@@ -178,15 +173,11 @@ def update(frame):
                 p1.recovery()
                 # print(frame, "No")
             
-# set color is to get the color
     
 ani = animation.FuncAnimation(fig=fig, func=update, frames=500, interval=100,repeat = False)
 
-writer = animation.PillowWriter(fps=15,
-                                  metadata=dict(artist='Me'),
-                                  bitrate=1800)
-ani.save('Pandemic.gif', writer=writer)
+#writer = animation.PillowWriter(fps=15,
+#                                  metadata=dict(artist='Me'),
+#                                  bitrate=1800)
+#ani.save('Pandemic.gif', writer=writer)
 plt.show()
-
-print(people,infections, deaths)
-#print(time.time() - start)
